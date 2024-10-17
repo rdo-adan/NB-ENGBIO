@@ -1,0 +1,68 @@
+ # importar dados
+
+ qiime tools import   --type 'SampleData[SequencesWithQuality]' \
+   --input-path <caminho para o manifest.tsv> \
+   --output-path demux.qza \
+   --input-format SingleEndFastqManifestPhred33V2
+
+ # visualizar os dados
+
+qiime demux summarize \
+  --i-data demux.qza \
+  --o-visualization demux-summary.qzv
+
+# Truncar leituras com base na qualidade
+
+qiime dada2 denoise-single \
+  --i-demultiplexed-seqs demux.qza \
+  --p-trim-left 0 \ # remove bases iniciais
+  --p-trunc-len 0 \ # valor de truncamento
+  --p-max-ee 3 \ # quantidade de erros permitidos
+  --p-trunc-q 0 \ # corta leituras abaixo do score de qualidade selecionado
+  --o-representative-sequences rep-seqs.qza \
+  --o-table table.qza \
+  --o-denoising-stats denoising-stats.qza
+
+# Desduplicar e identificar ASV com  DADA2
+
+qiime dada2 denoise-single \
+  --i-demultiplexed-seqs demux.qza \
+  --p-trim-left 0 \
+  --p-trunc-len 0 \
+  --o-representative-sequences rep-seqs.qza \
+  --o-table table.qza \
+  --o-denoising-stats denoising-stats.qza
+
+# Visualizar as ASV e estatisticas
+
+qiime feature-table summarize \
+  --i-table table.qza \
+  --o-visualization table.qzv
+
+qiime feature-table tabulate-seqs \
+  --i-data rep-seqs.qza \
+  --o-visualization rep-seqs.qzv
+
+# Atribuir taxonomia
+
+qiime feature-classifier classify-sklearn \
+  --i-classifier /caminho/para/classificador_greengenes2.qza \
+  --i-reads rep-seqs.qza \
+  --o-classification taxonomy.qza
+
+# Visualizar os resultados da taxonomia
+
+qiime metadata tabulate \
+  --m-input-file taxonomy.qza \
+  --o-visualization taxonomy.qzv
+
+# após receber os dados totais, passar para
+# R e realizar plotagens de diversidade
+
+
+
+
+
+
+
+  
