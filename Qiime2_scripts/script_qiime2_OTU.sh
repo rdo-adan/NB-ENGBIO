@@ -1,13 +1,9 @@
 #!/bin/bash
 
 echo -e "\033[0;34mTenha certeza que o qiime2-amplicon está instalado em um ambiente separado para não haver conflito com outros pacotes."
-echo
 echo -e "\033[0;34mScript feito para a versão qiime2 2024.5 Amplicon Distribution."
-echo
 echo -e "\033[0;34mScript escrito para 16s total com base de dados GreenGenes 2024.09 e classificador treinado, veja o Read.me para obter detalhes e links para download das versões aqui utilizadas."
-echo
 echo -e "\033[0;34mScript originalmente montado para SingleEndFastq, com uso de manifesto."
-echo
 echo -e "\033[0;34mAltere-o para atender as suas necessidades ou entre em contado via GitHub."
 echo
 echo
@@ -61,11 +57,12 @@ qiime vsearch cluster-features-de-novo \
   --i-sequences "${OUTPUT_DIR}/rep-seqs.qza" \
   --i-table "${OUTPUT_DIR}/table.qza" \
   --p-perc-identity 0.97 \
+  --p-threads 12 \
   --o-clustered-table "${OUTPUT_DIR}/otu-table.qza" \
   --o-clustered-sequences "${OUTPUT_DIR}/otu-rep-seqs.qza"
 echo -e "\033[0;32mAgrupamento de OTUs concluído."
 
-# 4. Visualizar OTUs e estatísticas
+# 5. Visualizar OTUs e estatísticas
 echo -e "\033[0;35mgerando arquivos de visualização de OTUs."
 qiime feature-table summarize \
   --i-table "${OUTPUT_DIR}/otu-table.qza" \
@@ -76,46 +73,50 @@ qiime feature-table tabulate-seqs \
   --o-visualization "${OUTPUT_DIR}/otu-rep-seqs.qzv"
 echo -e "\033[0;32mConcluído, veja ${OUTPUT_DIR} para OTUs."
 
-# 5. Atribuir taxonomia
+
+# 6. Atribuir taxonomia para OTUs
 echo -e "\033[0;35matribuindo taxonomia."
 qiime feature-classifier classify-sklearn \
   --i-classifier "$CLASSIFIER_PATH" \
-  --i-reads "${OUTPUT_DIR}/rep-seqs.qza" \
+  --i-reads "${OUTPUT_DIR}/otu-rep-seqs.qza" \
   --o-classification "${OUTPUT_DIR}/taxonomy.qza"
-echo -e "\033[0;32matribuição concluída."
+echo -e "\033[0;32matribuição de taxonomia concluída."
 
-# 6. Visualizar resultados da taxonomia
+# 7. Visualizar resultados da taxonomia para OTUs
 echo -e "\033[0;35mgerando arquivos de visualização."
 qiime metadata tabulate \
   --m-input-file "${OUTPUT_DIR}/taxonomy.qza" \
   --o-visualization "${OUTPUT_DIR}/taxonomy.qzv"
-echo -e "\033[0;32mconcluido, veja ${OUTPUT_DIR}."
+echo -e "\033[0;32mConcluído, veja ${OUTPUT_DIR} para resultados de taxonomia."
 
-# 7. Gerar árvore filogenética
-echo -e "\033[0;35mgerando árvore filogenética."
+# 8. Gerar árvore filogenética a partir de OTUs
+echo -e "\033[0;35mGerando árvore filogenética."
 qiime alignment mafft \
-  --i-sequences "${OUTPUT_DIR}/rep-seqs.qza" \
-  --o-alignment "${OUTPUT_DIR}/aligned-rep-seqs.qza"
-echo -e "\033[0;32m1/4"
+  --i-sequences "${OUTPUT_DIR}/otu-rep-seqs.qza" \
+  --o-alignment "${OUTPUT_DIR}/aligned-otu-rep-seqs.qza"
+  echo -e "\033[0;32m1/4"
+
 qiime alignment mask \
-  --i-alignment "${OUTPUT_DIR}/aligned-rep-seqs.qza" \
-  --o-masked-alignment "${OUTPUT_DIR}/masked-aligned-rep-seqs.qza"
+  --i-alignment "${OUTPUT_DIR}/aligned-otu-rep-seqs.qza" \
+  --o-masked-alignment "${OUTPUT_DIR}/masked-aligned-otu-rep-seqs.qza"
 echo -e "\033[0;32m2/4"
+
 qiime phylogeny fasttree \
-  --i-alignment "${OUTPUT_DIR}/masked-aligned-rep-seqs.qza" \
+  --i-alignment "${OUTPUT_DIR}/masked-aligned-otu-rep-seqs.qza" \
   --o-tree "${OUTPUT_DIR}/unrooted-tree.qza"
 echo -e "\033[0;32m3/4"
+
 qiime phylogeny midpoint-root \
   --i-tree "${OUTPUT_DIR}/unrooted-tree.qza" \
   --o-rooted-tree "${OUTPUT_DIR}/rooted-tree.qza"
-echo -e "\033[0;32m4/4"
+echo -e "\033[0;32m4/4 Árvore filogenética gerada."
 
-# 8. Exportar árvore no formato .nwk
-echo -e "\033[0;35mexportando para arquivo .nwk"
+# 9. Exportar a árvore filogenética no formato .nwk
+echo -e "\033[0;35mExportando a árvore filogenética para o formato .nwk."
 qiime tools export \
   --input-path "${OUTPUT_DIR}/rooted-tree.qza" \
   --output-path "${OUTPUT_DIR}/tree-output"
-echo -e "\033[0;32mexportado para ${OUTPUT_DIR}."
+echo -e "\033[0;32mExportação concluída para ${OUTPUT_DIR}/tree-output."
 
 # Fim do script
 echo -e "\033[0;32mScript finalizado, verifique todos os arquivos gerados em: ${OUTPUT_DIR}."
